@@ -1,34 +1,39 @@
-export type EnvStage = string;
+export type Stage = 'development' | 'staging' | 'production';
 
-export type EnvValue = string | number | boolean | null;
+export type EnvValue = string | number | boolean | undefined;
 
-export interface EnvSchema {
-  [key: string]: {
-    type: 'string' | 'number' | 'boolean';
-    required?: boolean;
-    default?: EnvValue;
-    stages?: EnvStage[];
-  };
+export type EnvConfig = Record<string, string>;
+
+export type CoercedEnvConfig = Record<string, EnvValue>;
+
+export type FieldType = 'string' | 'number' | 'boolean';
+
+export interface FieldSchema {
+  type: FieldType;
+  required?: boolean;
+  default?: EnvValue;
+  description?: string;
 }
 
-export interface EnvConfig {
-  stage: EnvStage;
-  schema: EnvSchema;
-  values: Record<string, EnvValue>;
-}
+export type EnvSchema = Record<string, FieldSchema>;
 
 export interface ValidationResult {
   valid: boolean;
-  errors: ValidationError[];
-  warnings: ValidationWarning[];
+  errors: string[];
+  values: CoercedEnvConfig;
 }
 
-export interface ValidationError {
-  key: string;
-  message: string;
+export interface ChainOptions {
+  schema: EnvSchema;
+  stage?: Stage;
+  envFile?: string;
+  overrideExisting?: boolean;
+  strict?: boolean;
 }
 
-export interface ValidationWarning {
-  key: string;
-  message: string;
+export interface ChainResult {
+  stage: Stage;
+  config: CoercedEnvConfig;
+  errors: string[];
+  valid: boolean;
 }
