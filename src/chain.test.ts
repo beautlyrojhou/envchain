@@ -36,6 +36,12 @@ describe('EnvChain', () => {
     expect(() => chain.addStage('unknown', {})).toThrow('Unknown stage');
   });
 
+  it('throws on unknown stage in resolve', () => {
+    const chain = new EnvChain(['base'], schema);
+    chain.addStage('base', { PORT: '3000' });
+    expect(() => chain.resolve('unknown')).toThrow('Unknown stage');
+  });
+
   it('throws validation error for invalid stage config', () => {
     const chain = new EnvChain(['base', 'production'], schema);
     chain
@@ -53,5 +59,15 @@ describe('EnvChain', () => {
 
     const result = chain.validateStage('production');
     expect(result.valid).toBe(true);
+  });
+
+  it('applies default value when key is missing from all stages', () => {
+    const chain = new EnvChain(['base', 'production'], schema);
+    chain
+      .addStage('base', { PORT: '3000' })
+      .addStage('production', { SECRET: 'top-secret' });
+
+    const config = chain.resolve('production');
+    expect(config.values['LOG_LEVEL']).toBe('info');
   });
 });
