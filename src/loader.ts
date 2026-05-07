@@ -20,13 +20,22 @@ export function resolveEnvFile(stage: Stage, customPath?: string): string {
   return STAGE_FILE_MAP[stage] ?? '.env';
 }
 
+/**
+ * Reads and parses an env file from the given path.
+ * Returns an empty object if the file does not exist.
+ * Throws an error if the file exists but cannot be read or parsed.
+ */
 export function loadEnvFile(filePath: string): Record<string, string> {
   const resolved = path.resolve(process.cwd(), filePath);
   if (!fs.existsSync(resolved)) {
     return {};
   }
-  const result = dotenv.parse(fs.readFileSync(resolved));
-  return result;
+  try {
+    const result = dotenv.parse(fs.readFileSync(resolved));
+    return result;
+  } catch (err) {
+    throw new Error(`Failed to read or parse env file "${resolved}": ${(err as Error).message}`);
+  }
 }
 
 export function loadEnv(options: LoadOptions = {}): EnvConfig {
