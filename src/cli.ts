@@ -1,53 +1,64 @@
-#!/usr/bin/env node
-import { runPipeline, PipelineOptions } from './pipeline';
+import { loadEnv } from './loader';
+import { resolveStageEnv } from './merger';
+import { runPipeline } from './pipeline';
+import { diffEnvMaps, formatDiff } from './differ';
 
-function parseArgs(argv: string[]): { stage: string; options: PipelineOptions } {
-  const args = argv.slice(2);
-  const flags: Record<string, string> = {};
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i].startsWith('--') && i + 1 < args.length) {
-      const key = args[i].slice(2);
-      flags[key] = args[++i];
-    }
-  }
-
-  const stage = flags['stage'];
-  if (!stage) {
-    throw new Error('Missing required flag: --stage <name>');
-  }
-
-  const stages = flags['stages']
-    ? flags['stages'].split(',')
-    : ['development', 'staging', 'production'];
-
-  const options: PipelineOptions = {
-    stages,
-    envDir: flags['env-dir'] ?? '.',
-    baseFile: flags['base-file'] ?? '.env',
-    format: (flags['format'] as PipelineOptions['format']) ?? 'dotenv',
-  };
-
-  return { stage, options };
+export interface CliArgs {
+  command: string;
+  stage?: string;
+  baseStage?: string;
+  files: string[];
+  format?: string;
+  showUnchanged?: boolean;
+  output?: string;
 }
 
-function main(): void {
-  try {
-    const { stage, options } = parseArgs(process.argv);
-    const result = runPipeline(stage, options);
+export function parseArgs(argv: string[]): CliArgs {
+  const args: CliArgs = { command: 'run', files: [] };
+  const rest = argv.slice(2);
 
-    if (result.errors.length > 0) {
-      console.error('[envchain] Validation warnings:');
-      result.errors.forEach((e) => console.error(`  - ${e}`));
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i];
+    if (arg === 'diff') {
+      args.command = 'diff';
+    } else if (arg === 'run') {
+      args.command = 'run';
+    } else if (arg === '--stage' || arg === '-s') {
+      args.stage = rest[++i];
+    } else if (arg === '--base') {
+      args.baseStage = rest[++i];
+    } else if (arg === '--format' || arg === '-f') {
+      args.format = rest[++i];
+    } else if (arg === '--output' || arg === '-o') {
+      args.output = rest[++i];
+    } else if (arg === '--show-unchanged') {
+      args.showUnchanged = true;
+    } else if (!arg.startsWith('-')) {
+      args.files.push(arg);
     }
-
-    process.stdout.write(result.output + '\n');
-  } catch (err) {
-    if (err instanceof Error) {
-      console.error(`[envchain] Error: ${err.message}`);
-    }
-    process.exit(1);
   }
+
+  return args;
 }
 
-main();
+export async function main(argv: string[] = process.argv): Promise<void> {
+  const args = parseArgs(argv);
+
+  if (args.command === 'diff') {
+    const baseStage = args.baseStage ?? 'base';
+    const targetStage = args.stage ?? 'production';
+    const baseEnv = await loadEnv(args.files);
+    const base = resolveStageEnv(baseEnv, baseStage);
+    const target = resolveStageEnv(baseEnv, targetStage);
+    const diff = diffEnvMaps(base, target);
+    console.log(formatDiff(diff, args.showUnchanged ?? false));
+    return;
+  }
+
+  await runPipeline({
+    files: args.files,
+    stage: args.stage,
+    format: args.format as any,
+    output: args.output,
+  });
+}
