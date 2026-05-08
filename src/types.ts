@@ -1,39 +1,35 @@
-export type Stage = 'development' | 'staging' | 'production';
+export type EnvMap = Record<string, string>;
 
-export type EnvValue = string | number | boolean | undefined;
+export type EnvStage = 'development' | 'staging' | 'production' | string;
 
-export type EnvConfig = Record<string, string>;
-
-export type CoercedEnvConfig = Record<string, EnvValue>;
-
-export type FieldType = 'string' | 'number' | 'boolean';
-
-export interface FieldSchema {
-  type: FieldType;
-  required?: boolean;
-  default?: EnvValue;
-  description?: string;
+export interface EnvSchema {
+  [key: string]: {
+    type?: 'string' | 'number' | 'boolean';
+    required?: boolean;
+    default?: string;
+    sensitive?: boolean;
+    description?: string;
+  };
 }
 
-export type EnvSchema = Record<string, FieldSchema>;
+export interface PipelineOptions {
+  stage: EnvStage;
+  schema?: EnvSchema;
+  files?: string[];
+  format?: 'dotenv' | 'json' | 'export';
+  redact?: boolean;
+  audit?: boolean;
+}
+
+export interface PipelineResult {
+  env: EnvMap;
+  output: string;
+  warnings: string[];
+  auditReport?: import('./auditor').AuditReport;
+}
 
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
-  values: CoercedEnvConfig;
-}
-
-export interface ChainOptions {
-  schema: EnvSchema;
-  stage?: Stage;
-  envFile?: string;
-  overrideExisting?: boolean;
-  strict?: boolean;
-}
-
-export interface ChainResult {
-  stage: Stage;
-  config: CoercedEnvConfig;
-  errors: string[];
-  valid: boolean;
+  coerced: EnvMap;
 }
