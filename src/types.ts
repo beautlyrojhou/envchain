@@ -1,35 +1,44 @@
+/**
+ * types.ts
+ * Shared type definitions for envchain.
+ */
+
+/** Core env map: a flat record of string key-value pairs */
 export type EnvMap = Record<string, string>;
 
-export type EnvStage = 'development' | 'staging' | 'production' | string;
+/** Supported output formats */
+export type OutputFormat = 'dotenv' | 'json' | 'export';
 
-export interface EnvSchema {
-  [key: string]: {
-    type?: 'string' | 'number' | 'boolean';
-    required?: boolean;
-    default?: string;
-    sensitive?: boolean;
-    description?: string;
-  };
+/** Deployment stage identifier */
+export type Stage = string;
+
+/** Per-stage env overrides */
+export type StageOverrides = Record<Stage, Partial<EnvMap>>;
+
+/** Validation rule for a single key */
+export interface ValidationRule {
+  required?: boolean;
+  type?: 'string' | 'number' | 'boolean';
+  pattern?: RegExp;
+  minLength?: number;
+  maxLength?: number;
 }
 
-export interface PipelineOptions {
-  stage: EnvStage;
-  schema?: EnvSchema;
-  files?: string[];
-  format?: 'dotenv' | 'json' | 'export';
-  redact?: boolean;
-  audit?: boolean;
-}
+/** Schema maps keys to their validation rules */
+export type EnvSchema = Record<string, ValidationRule>;
 
-export interface PipelineResult {
-  env: EnvMap;
-  output: string;
-  warnings: string[];
-  auditReport?: import('./auditor').AuditReport;
-}
-
+/** Result of a validation run */
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
-  coerced: EnvMap;
+}
+
+/** Pipeline configuration */
+export interface PipelineConfig {
+  envFiles: string[];
+  stage?: Stage;
+  schema?: EnvSchema;
+  outputFormat?: OutputFormat;
+  redact?: boolean;
+  encrypt?: boolean;
 }
