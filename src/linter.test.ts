@@ -24,6 +24,11 @@ describe('lintKeyNaming', () => {
     const rules = result.map(i => i.rule);
     expect(rules).toContain('key-underscore-boundary');
   });
+
+  it('returns no issues for an empty env object', () => {
+    const result = lintKeyNaming({});
+    expect(result).toHaveLength(0);
+  });
 });
 
 describe('lintEmptyKeys', () => {
@@ -36,6 +41,12 @@ describe('lintEmptyKeys', () => {
     expect(result).toHaveLength(1);
     expect(result[0].rule).toBe('no-empty-value');
     expect(result[0].key).toBe('EMPTY_KEY');
+  });
+
+  it('warns on each empty value independently', () => {
+    const result = lintEmptyKeys({ A: '', B: '', C: 'ok' });
+    expect(result).toHaveLength(2);
+    expect(result.map(i => i.key)).toEqual(expect.arrayContaining(['A', 'B']));
   });
 });
 
@@ -50,6 +61,12 @@ describe('lintLongValues', () => {
     expect(result).toHaveLength(1);
     expect(result[0].rule).toBe('max-value-length');
     expect(result[0].severity).toBe('info');
+  });
+
+  it('passes values exactly at the limit', () => {
+    const exactVal = 'x'.repeat(512);
+    const result = lintLongValues({ EXACT_KEY: exactVal }, 512);
+    expect(result).toHaveLength(0);
   });
 });
 
